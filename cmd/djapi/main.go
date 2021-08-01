@@ -7,7 +7,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v4"
-	"github.com/joho/godotenv"
 )
 
 func dbHealthCheck(c *gin.Context) {
@@ -50,8 +49,6 @@ func setupRouter() *gin.Engine {
 }
 
 func main() {
-	// Spin up environment variables from .env file.
-	godotenv.Load(".env")
 	r := setupRouter()
 	r.Run(":8080")
 }
