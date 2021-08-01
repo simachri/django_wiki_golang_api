@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 func dbHealthCheck(c *gin.Context) {
@@ -21,15 +21,15 @@ func dbHealthCheck(c *gin.Context) {
 	 * dbname -> PGDATABASE
 	 * See `go doc pgconn.ParseConfig` for details.
 	 */
-	conn, err := pgx.Connect(context.Background(), "")
+	dbpool, err := pgxpool.Connect(context.Background(), "")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)
 	}
-	defer conn.Close(context.Background())
+	defer dbpool.Close()
 
 	var greeting string
-	err = conn.QueryRow(context.Background(), "select 'Hello, world!'").Scan(&greeting)
+	err = dbpool.QueryRow(context.Background(), "select 'Hello, world!'").Scan(&greeting)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
 		os.Exit(1)
