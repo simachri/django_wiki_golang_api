@@ -9,6 +9,15 @@
   programmatically with a Postgres database.
 
 
+## To do
+
+  - [ ] Golang API: DB-Zugriff
+  - [ ] RESTful-API-Design
+    - [ ] Generell einlernen
+    - [ ] Ist es sinnvoll, SWAGGER o.ä. einzusetzen? Wenn ja, wie funktioniert es?
+  - [ ] Implementierung
+
+
 ## Open questions
 
  - [ ] Local files may be moved or renamed: How to remember which local file maps to 
@@ -34,10 +43,27 @@
      $ docker-compose up -d
      $ docker-compose logs
      ```
+
   1. To connect to the PostgreSQL database from outside the Docker container use:
      1. Take the password from 
         `~/Development/Linode-coco-life/django-on-docker/.env.dev.db`
      1. `psql -U xi3k -h 0.0.0.0 -d pk_db_dev`
+
+  1. Maintain a file `.env`:
+     ```
+      PGHOST=0.0.0.0
+      PGPORT=5432
+      PGDATABASE=pk_db_dev
+      PGUSER=xi3k
+      PGPASSWORD=<DB password>
+     ```
+
+  1. Start the server:
+     `go run ./cmd/djapi/main.go` 
+
+  1. Test the following endpoints:
+     - `localhost:8080/ping`
+     - `localhost:8080/db/health`
 
 
 ## Data model of articles
@@ -230,8 +256,11 @@
 
 ### /articles
 
-  _Hier_ weitermachen:
-  - [ ] RESTful-API-Design
-    - [ ] Generell einlernen
-    - [ ] Ist es sinnvoll, SWAGGER o.ä. einzusetzen? Wenn ja, wie funktioniert es?
-  - [ ] Implementierung
+
+## Installation guide
+
+### Go project and dependencies
+
+  1. `go mod init coco-life.de/wapi`
+  1. `go get github.com/gin-gonic/gin`
+  1. `go get github.com/jackc/pgx/v4`
