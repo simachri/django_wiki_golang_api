@@ -11,7 +11,7 @@
 
 ## To do
 
-  - [ ] Golang API: DB-Zugriff
+  - [X] Golang API: DB-Zugriff
   - [ ] RESTful-API-Design
     - [ ] Generell einlernen
     - [ ] Ist es sinnvoll, SWAGGER o.ä. einzusetzen? Wenn ja, wie funktioniert es?
