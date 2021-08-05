@@ -17,7 +17,7 @@ func TestApiRoutes(t *testing.T) {
 		expString string
 	}{
 		{"GET endpoint /ping", "GET", "/ping", 200, "pong"},
-		{"GET endpoint /db/health", "GET", "/db/heatlh", 200, ""},
+		{"GET endpoint /db/health", "GET", "/db/health", 200, ""},
 	}
 
 	// A DB connection requires environment variables.
@@ -27,7 +27,7 @@ func TestApiRoutes(t *testing.T) {
 		t.Run(tc.descr, func(t *testing.T) {
 
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest("GET", "/ping", nil)
+			req, _ := http.NewRequest("GET", tc.endpoint, nil)
 			router.ServeHTTP(w, req)
 
 			if w.Code != tc.expCode {
