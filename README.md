@@ -36,6 +36,12 @@
 
 ## Testing
 
+### Go tests
+
+  From the project root run `go test -v ./...`.
+
+### Interactively
+
   1. Spin up the Docker containers:
      ```sh
      $ cd ~/Development/Linode-coco-life/django-on-docker
@@ -59,7 +65,7 @@
      ```
 
   1. Start the server:
-     `go run ./cmd/djapi/main.go` 
+     `go run ./...` 
 
   1. Test the following endpoints:
      - `localhost:8080/ping`
