@@ -81,7 +81,7 @@
 
 ## Database tables
 
-### `wiki_article`
+### `wiki_article` - article header data
 <a id="db_wiki_art"></a>
 
   ```
@@ -122,7 +122,7 @@
     [models/article.py](/home/xi3k/.local/share/virtualenvs/app-IosILp-G/lib/python3.9/site-packages/wiki/models/article.py)
 
 
-### `wiki_articlerevision` - contains actual content of an article
+### `wiki_articlerevision` - article content
 <a id="db_wiki_artrev"></a>
 
   _Fields_:
