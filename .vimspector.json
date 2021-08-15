@@ -9,6 +9,16 @@
         "dlvToolPath": "~/go/bin/dlv",
         "envFile": ".env"
       }
+    },
+    "test": {
+      "adapter": "vscode-go",
+      "configuration": {
+        "request": "launch",
+        "program": "${fileDirname}",
+        "mode": "test",
+        "dlvToolPath": "~/go/bin/dlv",
+        "envFile": ".env"
+      }
     }
   }
 }
