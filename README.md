@@ -109,6 +109,19 @@
           <a id="wiki_art_id"></a>
 
   - `current_revision_id`: _Foreign key_ to [wiki_articlerevision-id](#wiki_artrev_id)
+
+    __Notes__:
+    - The `current_revision_id` is not available before the `wiki_articlerevision` record 
+      has been created. Yet, the `wiki_articlerevision` record requires `wiki_article-id` 
+      to be created. That is, `current_revision_id` needs to be filled _after_ 
+      `wiki_articlerevision` has been created:
+      1. Create new record in `wiki_article`.
+      1. Create new record in `wiki_articlerevision` with foreign key to `wiki_article-id`.
+      1. Update the record in `wiki_article` and set `current_revision_id`.
+
+    - This __cannot__ be achieved using a trigger function on the database as this will 
+      interfere with Django Wiki's database saving logic.
+
   - `created` and `modified`: For a reference, see where the timestamps are create in 
     class `Article`:
       <a id="wiki_art_crea"></a>
@@ -141,6 +154,10 @@
   - `content`: Contains the actual article markdown source
   - `title`: Contains the actual article markdown source
   - `created` and `modified`: See [wiki_article](#wiki_art_crea).
+  - `deleted`: Has _notnull_ constraint.
+  - `locked`: Has _notnull_ constraint.
+  - `user_message`, `automatic_log`, `ip_address`: Have _notnull_ constraints but are 
+    filled with empty string.
 
 
 ### `wiki_urlpath` - model hierarchy of articles in the wiki
