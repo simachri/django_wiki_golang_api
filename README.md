@@ -171,19 +171,32 @@
         [here](https://www.ibase.ru/files/articles/programming/dbmstrees/sqltrees.html)
 
     - __Algorithms__:
-      - _Insert_ a new article `a` after node `p` (previous).  Whether `a` and `p` are 
-        siblings or parents is irrelevant for `lft` and `rght`. The 
-        parent-child-relationship is modeled through the `parent_id`.
+      - _Insert_ a new article `n` as _sibling_ next to node `l` (now on the left) as a 
+        _leaf_ node under _parent_ `p`:
+        1. Set `lft` and `rght` of `n` based on `l`:
+           - `n.lft = l.rght + 1`
+           - `n.rght = l.rght + 2`
+        1. Adjust all nodes `r` right to `n` that are under _parent_ `p`, that is, all 
+           nodes `r` with `n.rght >= r.lft AND r.rght < p.rght`:
+           - Set `r.lft = r.lft + 2`
+           - Set `r.rght = r.rght + 2`
+         1. Adjust all nodes `r` above or right to _parent_ `p` including `p` istelf:
+            <a id="adj_nodes_above_and_right"></a>
 
-        1. `a.lft = p.rght + 1`: The new article's `lft` property is derived from its 
-           previous node's `rght` property.
-        1. All nodes `r` in the tree right to the new node (independent of the hierarchy 
-           as it is modeled through field `parent_id`), need to have their `lft` and 
-           `rght` properties incremented by `2` as a new node has been inserted.
-           1. _For all nodes with_ `r.rght > a.rght`:  `r.lft = r.lft + 2`.
-           1. _For all nodes with_ `r.lft > a.rght`:  `r.rght = r.rght + 2`.
+            - `rght`: All nodes `r` with `n.rght <= r.rght` (direct parent and 
+              ancestors): Set `r.rght = r.rght + 2`
+            - `lft`: All nodes `r` with `n.rght <= r.lft` (nodes right to direct parent 
+              or ancestors): Set `r.lft = r.lft + 2`
+
+      - _Insert_ a new article `n` as _child_ to _parent_ `p`.
+        1. Set `lft` and `rght` of `n` based on `p`:
+           - `n.lft = p.lft + 1`
+           - `n.rght = p.lft + 2`
+         1. Adjust all nodes `r` above or right to _parent_ `p` including `p` istelf.
+            Same [algorithm](#adj_nodes_above_and_right).
 
       - _Delete_ an article `d`:
+        - [ ] Review!
         All nodes `r` in the tree right to the deleted node (independent of the hierarchy 
         as it is modeled through field `parent_id`), need to have their `lft` and 
         `rght` properties decremented by `2` as there is one node missing now.
