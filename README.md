@@ -71,6 +71,19 @@
      - `localhost:8080/ping`
      - `localhost:8080/db/health`
 
+### Database: Fill with test data
+
+  Use `psql`:
+  - `\set title 'New article'`
+  - `\set content '# First level header'`
+  - `\set slug 'foo'`
+  - `\i test/sql/new_article.sql`
+
+
+### Database: Clear all test data
+
+  Use `psql`: `\i test/sql/delete_all_keep_root.sql`
+
 
 ## Data model of articles
 
