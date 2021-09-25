@@ -1,44 +1,77 @@
 package main
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"testing"
 
 	m "coco-life.de/wapi/internal"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
 )
 
+func clearDB() {
+	dbpool, err := pgxpool.Connect(context.Background(), "")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+		os.Exit(1)
+	}
+	_, err = dbpool.Exec(context.Background(), "TRUNCATE wiki_article CASCADE;")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to TRUNCATE wiki_article: %v\n", err)
+		os.Exit(1)
+	}
+}
+
 func TestApiRoutes(t *testing.T) {
+	// Read the environment variables for the DB connection.
+	godotenv.Load("../../.env")
+	// Override the database name to use the testing database.
+	os.Setenv("PGDATABASE", "go_api_tests")
+
+	clearDB()
+
 	cases := []struct {
 		descr       string
 		httpType    string
 		endpoint    string
+		bodyJSON    interface{}
 		expCode     int
 		expString   string
-		expResponse m.Response
+		expResponse m.Resource
 	}{
-		{"GET endpoint /ping", "GET", "/ping", 200, "pong", nil},
-		{"GET endpoint /db/health", "GET", "/db/health", 200, "", nil},
-		{"GET endpoint /articles/1", "GET", "/articles/1", 200, "",
+		{"GET endpoint /ping", "GET", "/ping", nil, http.StatusOK, "pong", nil},
+		{"GET endpoint /db/health", "GET", "/db/health", nil, http.StatusOK, "", nil},
+		{"Create new article", "POST", "/articles",
 			&m.Article{
-				ID:      1,
-				Title:   "Hello, hello, hello",
-				Content: "# Hello World"}},
+				Title:   "Article created from testing",
+				Content: "# Hello World",
+				Slug:    "unit",
+                ParentID: -1},
+			http.StatusCreated, "", nil},
+		//{"GET endpoint /articles/1", "GET", "/articles/1", nil, http.StatusOK, "",
+			//&m.Article{
+				//ID:      1,
+				//Title:   "Article created from testing",
+				//Content: "# Hello World"}},
 	}
 
-	// A DB connection requires environment variables.
-	godotenv.Load("../../.env")
 	router := setupRouter()
 	for _, tc := range cases {
 		t.Run(tc.descr, func(t *testing.T) {
 
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest("GET", tc.endpoint, nil)
+			requestBody, err := json.Marshal(tc.bodyJSON)
+			assert.Nil(t, err)
+			req, _ := http.NewRequest(tc.httpType, tc.endpoint, bytes.NewBuffer(requestBody))
+			req.Header.Set("Content-Type", "application/json; charset=UTF-8")
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, tc.expCode, w.Code, "expected return code %v, but got %v", tc.expCode, w.Code)
@@ -51,12 +84,12 @@ func TestApiRoutes(t *testing.T) {
 				data := reflect.New(respType).Interface()
 				err := json.Unmarshal([]byte(w.Body.String()), &data)
 				assert.Nil(t, err)
-				obj := data.(m.Response)
-                assert.True(t, tc.expResponse.Equals(obj),
-                    fmt.Sprintf(
-                            "JSON response differs.\n" +
-                            "Exp: %v\n" +
-                            "Act: %v\n", tc.expResponse, obj))
+				obj := data.(m.Resource)
+				assert.True(t, tc.expResponse.Equals(obj),
+					fmt.Sprintf(
+						"JSON response differs.\n"+
+							"Exp: %v\n"+
+							"Act: %v\n", tc.expResponse, obj))
 			}
 		})
 	}

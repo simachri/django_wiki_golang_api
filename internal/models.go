@@ -1,20 +1,27 @@
 package models
 
-// Response is the result of an API call.
-type Response interface {
+import "fmt"
+
+// Resource is the result of an API call.
+type Resource interface {
 	// Equals returns 'True' if the contents of the provided Response equals this Response instance's contents.
-	Equals(r Response) bool
+	Equals(r Resource) bool
+	// GetPath returns the path to the resource.
+	GetPath() string
 }
 
 // Article is a Wiki article.
 type Article struct {
-	ID      int    `json:"id"`
-	Title   string `json:"title"`
-	Content string `json:"content"`
+	ID         int    `json:"id"`
+	Title      string `json:"title" binding:"required"`
+	Content    string `json:"content"`
+	Slug       string `json:"slug" binding:"required"`
+	RevisionID int    `json:"revision_id"`
+	ParentID   int    `json:"parent_id" binding:"required"`
 }
 
 // Equals returns 'True' if the contents of the provided Response equals this Response instance's contents.
-func (a Article) Equals(r Response) bool {
+func (a Article) Equals(r Resource) bool {
 	b, ok := r.(*Article)
 	if !ok {
 		return false
@@ -26,4 +33,9 @@ func (a Article) Equals(r Response) bool {
 		return false
 	}
 	return true
+}
+
+// GetPath returns the path to the resource.
+func (a Article) GetPath() string {
+	return fmt.Sprintf("articles/%v", a.ID)
 }

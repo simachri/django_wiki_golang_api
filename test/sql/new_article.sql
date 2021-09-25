@@ -56,8 +56,7 @@ BEGIN
       select 
         hdr_id,
         1,
-        1, -- must not be 0. Otherwise, a foreign key violation is raised when performing 
-           -- the update on wiki_article below.
+        null,
         title_input,
         content_input,
         CURRENT_TIMESTAMP,
