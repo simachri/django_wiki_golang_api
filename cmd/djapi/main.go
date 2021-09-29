@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strconv"
 
 	"github.com/joho/godotenv"
 
@@ -47,7 +46,7 @@ func dbHealthCheck(c *gin.Context) {
 	c.String(http.StatusOK, fmt.Sprintln(greeting)+"Database connection up and running.")
 }
 
-func fetchArticle(c *gin.Context) {
+func fetchArticleBySlug(c *gin.Context) {
 	dbpool, err := pgxpool.Connect(context.Background(), "")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
@@ -55,12 +54,7 @@ func fetchArticle(c *gin.Context) {
 	}
 	defer dbpool.Close()
 
-	id, err := strconv.Atoi(c.Param("id"))
-	if notOK := handleErr(c, &err, "Failed to parse GET parameter 'id' as integer: %v\n"); notOK {
-		return
-	}
-
-	article, err := selectArticleByID(dbpool, id)
+	article, err := selectArticleBySlug(dbpool, c.Param("slug"))
 	if notOK := handleErr(c, &err, "Failed to query database table wiki_article: %v\n"); notOK {
 		return
 	}
@@ -68,18 +62,23 @@ func fetchArticle(c *gin.Context) {
 	c.JSON(http.StatusOK, article)
 }
 
-func selectArticleByID(dbpool *pgxpool.Pool, id int) (*models.Article, error) {
+func selectArticleBySlug(dbpool *pgxpool.Pool, slug string) (*models.Article, error) {
 	var article models.Article
 	err := pgxscan.Get(
 		context.Background(), dbpool, &article,
 		`select
             hdr.id,
+            rev.id as rev_id,
             rev.title,
-            rev.content
+            rev.content,
+            path.slug,
+            COALESCE(path.parent_id, -1) as parent
         from wiki_article as hdr
             inner join wiki_articlerevision as rev
                 on hdr.id = rev.article_id
-        where hdr.id = $1;`, id)
+            inner join wiki_urlpath as path
+                on hdr.id = path.article_id  
+        where path.slug = $1;`, slug)
 	return &article, err
 }
 
@@ -232,7 +231,7 @@ func addArticle(c *gin.Context) {
 		return
 	}
 
-	revID, err := insertWikiArticleRevision(dbpool, hdrID, articleInput.Content, articleInput.Title)
+	revID, err := insertWikiArticleRevision(dbpool, hdrID, articleInput.Title, articleInput.Content)
 	if notOK := handleErr(c, &err, "addArticle: Failed to INSERT into wiki_articlerevision: %v\n"); notOK {
 		return
 	}
@@ -249,7 +248,7 @@ func addArticle(c *gin.Context) {
 		return
 	}
 
-	articleOut, err := selectArticleByID(dbpool, hdrID)
+	articleOut, err := selectArticleBySlug(dbpool, articleInput.Slug)
 	if notOK := handleErr(c, &err, "Failed to query database table wiki_article: %v\n"); notOK {
 		return
 	}
@@ -280,7 +279,7 @@ func setupRouter() *gin.Engine {
 		c.String(http.StatusOK, "pong")
 	})
 	r.GET("/db/health", dbHealthCheck)
-	r.GET("/articles/:id", fetchArticle)
+	r.GET("/articles/:slug", fetchArticleBySlug)
 	r.POST("/articles", addArticle)
 	return r
 }

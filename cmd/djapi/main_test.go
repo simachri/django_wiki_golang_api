@@ -47,8 +47,8 @@ func TestApiRoutes(t *testing.T) {
 		expString   string
 		expResponse m.Resource
 	}{
-		{"GET endpoint /ping", "GET", "/ping", nil, http.StatusOK, "pong", nil},
-		{"GET endpoint /db/health", "GET", "/db/health", nil, http.StatusOK, "", nil},
+		{"Ping API", "GET", "/ping", nil, http.StatusOK, "pong", nil},
+		{"Database healthcheck", "GET", "/db/health", nil, http.StatusOK, "", nil},
 		{"Create new article", "POST", "/articles",
 			&m.Article{
 				Title:   "Article created from testing",
@@ -56,6 +56,12 @@ func TestApiRoutes(t *testing.T) {
 				Slug:    "unit",
                 ParentID: -1},
 			http.StatusCreated, "", nil},
+        {"GET article by slug", "GET", "/articles/unit", nil, http.StatusOK, "",
+            &m.Article{
+				Title:   "Article created from testing",
+				Content: "# Hello World",
+				Slug:    "unit",
+                ParentID: -1}},
 		//{"GET endpoint /articles/1", "GET", "/articles/1", nil, http.StatusOK, "",
 			//&m.Article{
 				//ID:      1,

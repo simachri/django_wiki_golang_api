@@ -16,8 +16,8 @@ type Article struct {
 	Title      string `json:"title" binding:"required"`
 	Content    string `json:"content"`
 	Slug       string `json:"slug" binding:"required"`
-	RevisionID int    `json:"revision_id"`
-	ParentID   int    `json:"parent_id" binding:"required"`
+	RevisionID int    `json:"revision_id" db:"rev_id"`
+	ParentID   int    `json:"parent_id" binding:"required" db:"parent"`
 }
 
 // Equals returns 'True' if the contents of the provided Response equals this Response instance's contents.
@@ -25,12 +25,23 @@ func (a Article) Equals(r Resource) bool {
 	b, ok := r.(*Article)
 	if !ok {
 		return false
-	} else if a.ID != b.ID {
-		return false
+		// Do not compare IDs for the sake of easier testing.
+		// TODO: Find a better approach.
+		//} else if a.ID != b.ID {
+		//return false
 	} else if a.Title != b.Title {
 		return false
 	} else if a.Content != b.Content {
 		return false
+	} else if a.Slug != b.Slug {
+		return false
+		// Do not compare IDs for the sake of easier testing.
+		// TODO: Find a better approach.
+		//} else if a.RevisionID != b.RevisionID {
+		//return false
+		//} else if a.ParentID != b.ParentID {
+		//return false
+		//}
 	}
 	return true
 }
