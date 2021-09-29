@@ -56,6 +56,8 @@ func TestApiRoutes(t *testing.T) {
 				Slug:    "unit",
                 ParentID: -1},
 			http.StatusCreated, "", nil},
+        // The following test requires the POST /articles test to be run first.
+        // FIXME: Make this test independent of POST /articles.
         {"GET article by slug", "GET", "/articles/unit", nil, http.StatusOK, "",
             &m.Article{
 				Title:   "Article created from testing",
