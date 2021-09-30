@@ -50,20 +50,31 @@ func TestBasics(t *testing.T) {
 		{"Ping API", "GET", "/ping", nil, http.StatusOK, "pong", nil},
 		{"Database healthcheck", "GET", "/db/health", nil, http.StatusOK, "", nil},
 		{"Create root article", "POST", "/articles",
-			&m.Article{
-				Title:   "Article created from testing",
-				Content: "# Hello World",
-				Slug:    "root",
-                ParentID: -1},
+			&m.RootArticle{
+                ArticleBase: m.ArticleBase{
+                    Title:   "Root article created from testing",
+                    Content: "# Hello World" }},
 			http.StatusCreated, "", nil},
+		//{"Create root article", "POST", "/articles",
+			//&m.Article{
+				//Title:   "Article created from testing",
+				//Content: "# Hello World",
+				//Slug:    "root",
+                //ParentID: -1},
+			//http.StatusCreated, "", nil},
         // The following test requires the POST /articles test to be run first.
         // FIXME: Make this test independent of POST /articles.
-        {"GET root article", "GET", "/articles/root", nil, http.StatusOK, "",
-            &m.Article{
-				Title:   "Article created from testing",
-				Content: "# Hello World",
-				Slug:    "root",
-                ParentID: -1}},
+        {"GET root article", "GET", "/articles", nil, http.StatusOK, "",
+            &m.RootArticle{
+                ArticleBase: m.ArticleBase{
+				Title:   "Root article created from testing",
+				Content: "# Hello World"}}},
+        //{"GET root article", "GET", "/articles/root", nil, http.StatusOK, "",
+            //&m.Article{
+				//Title:   "Article created from testing",
+				//Content: "# Hello World",
+				//Slug:    "root",
+                //ParentID: -1}},
 		//{"GET endpoint /articles/1", "GET", "/articles/1", nil, http.StatusOK, "",
 			//&m.Article{
 				//ID:      1,

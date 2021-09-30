@@ -46,6 +46,22 @@ func dbHealthCheck(c *gin.Context) {
 	c.String(http.StatusOK, fmt.Sprintln(greeting)+"Database connection up and running.")
 }
 
+func fetchRootArticle(c *gin.Context) {
+	dbpool, err := pgxpool.Connect(context.Background(), "")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+		os.Exit(1)
+	}
+	defer dbpool.Close()
+
+	article, err := selectRootArticle(dbpool)
+	if notOK := handleErr(c, &err, "Failed to query database table wiki_article: %v\n"); notOK {
+		return
+	}
+
+	c.JSON(http.StatusOK, article)
+}
+
 func fetchArticleBySlug(c *gin.Context) {
 	dbpool, err := pgxpool.Connect(context.Background(), "")
 	if err != nil {
@@ -60,6 +76,24 @@ func fetchArticleBySlug(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, article)
+}
+
+func selectRootArticle(dbpool *pgxpool.Pool) (*models.RootArticle, error) {
+	var article models.RootArticle
+	err := pgxscan.Get(
+		context.Background(), dbpool, &article,
+		`select
+            hdr.id,
+            rev.id as rev_id,
+            rev.title,
+            rev.content
+        from wiki_article as hdr
+            inner join wiki_articlerevision as rev
+                on hdr.id = rev.article_id
+            inner join wiki_urlpath as path
+                on hdr.id = path.article_id  
+        where path.level = 0;`)
+	return &article, err
 }
 
 func selectArticleBySlug(dbpool *pgxpool.Pool, slug string) (*models.Article, error) {
@@ -82,6 +116,38 @@ func selectArticleBySlug(dbpool *pgxpool.Pool, slug string) (*models.Article, er
 	return &article, err
 }
 
+func insertWikiURLPathRoot(conn *pgxpool.Pool, hdrID int) error {
+    // TODO: Adjust lft and rght.
+	sql := `insert into
+      wiki_urlpath
+      (
+        lft,
+        rght,
+        level,
+        tree_id,
+        article_id,
+        site_id
+      )
+      values
+      (
+        1,
+        2,
+        0,
+        1,
+        $1,
+        1
+      )`
+	var commandTag pgconn.CommandTag
+	var err error
+    commandTag, err = conn.Exec(context.Background(), sql, hdrID)
+	if err != nil {
+		return fmt.Errorf("Failed to insert record into wiki_urlpath: %v", err)
+	}
+	if commandTag.RowsAffected() != 1 {
+		return fmt.Errorf("Failed to insert record into wiki_urlpath")
+	}
+	return nil
+}
 func insertWikiURLPath(conn *pgxpool.Pool, hdrID int, slug string, parentID int) error {
 	sql := `insert into
       wiki_urlpath
@@ -108,11 +174,7 @@ func insertWikiURLPath(conn *pgxpool.Pool, hdrID int, slug string, parentID int)
       )`
 	var commandTag pgconn.CommandTag
 	var err error
-	if parentID == -1 {
-		commandTag, err = conn.Exec(context.Background(), sql, hdrID, slug, nil)
-	} else {
-		commandTag, err = conn.Exec(context.Background(), sql, hdrID, slug, parentID)
-    }
+    commandTag, err = conn.Exec(context.Background(), sql, hdrID, slug, parentID)
 	if err != nil {
 		return fmt.Errorf("Failed to insert record into wiki_urlpath: %v", err)
 	}
@@ -207,8 +269,8 @@ func setWikiArticleRevision(conn *pgxpool.Pool, hdrID int, revID int) error {
 	return nil
 }
 
-func addArticle(c *gin.Context) {
-	var articleInput models.Article
+func addRootArticle(c *gin.Context) {
+	var articleInput models.RootArticle
 	if err := c.ShouldBindJSON(&articleInput); err != nil {
 		if notOK := handleErr(c, &err, "addArticle: Failed to bind 'Article': %v\n"); notOK {
 			return
@@ -236,8 +298,8 @@ func addArticle(c *gin.Context) {
 		return
 	}
 
-	err = insertWikiURLPath(dbpool, hdrID, articleInput.Slug, articleInput.ParentID)
-	if notOK := handleErr(c, &err, "addArticle: Failed to INSERT into wiki_articlerevision: %v\n"); notOK {
+	err = insertWikiURLPathRoot(dbpool, hdrID)
+	if notOK := handleErr(c, &err, "addArticle: Failed to INSERT into wiki_urlpath: %v\n"); notOK {
 		return
 	}
 
@@ -248,7 +310,7 @@ func addArticle(c *gin.Context) {
 		return
 	}
 
-	articleOut, err := selectArticleBySlug(dbpool, articleInput.Slug)
+	articleOut, err := selectRootArticle(dbpool)
 	if notOK := handleErr(c, &err, "Failed to query database table wiki_article: %v\n"); notOK {
 		return
 	}
@@ -280,7 +342,8 @@ func setupRouter() *gin.Engine {
 	})
 	r.GET("/db/health", dbHealthCheck)
 	r.GET("/articles/:slug", fetchArticleBySlug)
-	r.POST("/articles", addArticle)
+	r.GET("/articles", fetchRootArticle)
+	r.POST("/articles", addRootArticle)
 	return r
 }
 
