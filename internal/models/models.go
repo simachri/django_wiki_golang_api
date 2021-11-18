@@ -8,6 +8,8 @@ type Resource interface {
 	Equals(r Resource) bool
 	// GetPath returns the path to the resource.
 	GetPath() string
+    // IsRoot returns 'True' if it is the root article.
+    IsRoot() bool
 }
 
 // ArticleBase is the common base of every article.
@@ -44,8 +46,25 @@ func (a RootArticle) Equals(r Resource) bool {
 		return false
 	} else if a.Content != b.Content {
 		return false
-	//} else if a.Slug != b.Slug {
+	}
+	return true
+}
+
+// Equals returns 'True' if the contents of the provided RootArticle equals this RootArticle instance's contents.
+func (a Article) Equals(r Resource) bool {
+	b, ok := r.(*Article)
+	if !ok {
+		return false
+		// Do not compare IDs for the sake of easier testing.
+		// TODO: Find a better approach.
+		//} else if a.ID != b.ID {
 		//return false
+	} else if a.Title != b.Title {
+		return false
+	} else if a.Content != b.Content {
+		return false
+    } else if a.Slug != b.Slug {
+        return false
 		// Do not compare IDs for the sake of easier testing.
 		// TODO: Find a better approach.
 		//} else if a.RevisionID != b.RevisionID {
@@ -60,4 +79,14 @@ func (a RootArticle) Equals(r Resource) bool {
 // GetPath returns the path to the resource.
 func (a ArticleBase) GetPath() string {
 	return fmt.Sprintf("articles/%v", a.ID)
+}
+
+// IsRoot returns 'True' if it is the root article.
+func (a Article) IsRoot() bool{
+    return false
+}
+
+// IsRoot returns 'True' if it is the root article.
+func (a RootArticle) IsRoot() bool{
+    return true
 }
