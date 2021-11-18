@@ -9,15 +9,6 @@
   programmatically with a Postgres database.
 
 
-## To do
-
-  - [X] Golang API: DB-Zugriff
-  - [ ] RESTful-API-Design
-    - [ ] Generell einlernen
-    - [ ] Ist es sinnvoll, SWAGGER o.ä. einzusetzen? Wenn ja, wie funktioniert es?
-  - [ ] Implementierung
-
-
 ## Open questions
 
  - [ ] Local files may be moved or renamed: How to remember which local file maps to 
@@ -36,24 +27,57 @@
 
 ## Testing
 
+### Spin up Docker containers for Django Wiki
+<a id="launch_app"></a>
+
+  ```sh
+  $ cd ~/Development/Linode-coco-life/django-on-docker
+  $ docker-compose down
+  $ docker-compose up -d
+  $ docker-compose logs
+  ```
+
+### Databes with test data
+
+#### First time setup of test database
+
+  1. [Spin up the Docker containers](#launch_app).
+  1. Create a superuse account.
+  1. Create a root article.
+  1. Clone the database:
+     1. Login to database server using [psql](#conn_to_pgdb).
+     1. List existing databases: `\l`
+     1. Run `create database go_api_tests with template pk_db_dev;`
+  
+#### Create single articles
+
+  Use `psql`:
+  - `\set title 'New article'`
+  - `\set content '# First level header'`
+  - `\set slug 'foo'`
+  - `\i test/sql/new_article.sql`
+
+#### Clear all test data
+
+  Use `psql`: `\i test/sql/delete_all_keep_root.sql`
+
+  __Note__: `go test ...` - see below - programmatically clears the test database.
+
+
 ### Go tests
 
   From the project root run `go test -v ./...`.
 
+
 ### Interactively
 
-  1. Spin up the Docker containers:
-     ```sh
-     $ cd ~/Development/Linode-coco-life/django-on-docker
-     $ docker-compose down
-     $ docker-compose up -d
-     $ docker-compose logs
-     ```
+  1. [Spin up the Docker containers](#launch_app).
 
   1. To connect to the PostgreSQL database from outside the Docker container use:
      1. Take the password from 
         `~/Development/Linode-coco-life/django-on-docker/.env.dev.db`
      1. `psql -U xi3k -h 0.0.0.0 -d pk_db_dev`
+         <a id="conn_to_pgdb"></a>
 
   1. Maintain a file `.env`:
      ```
@@ -70,19 +94,6 @@
   1. Test the following endpoints:
      - `localhost:8080/ping`
      - `localhost:8080/db/health`
-
-### Database: Fill with test data
-
-  Use `psql`:
-  - `\set title 'New article'`
-  - `\set content '# First level header'`
-  - `\set slug 'foo'`
-  - `\i test/sql/new_article.sql`
-
-
-### Database: Clear all test data
-
-  Use `psql`: `\i test/sql/delete_all_keep_root.sql`
 
 
 ## Data model of articles
