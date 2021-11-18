@@ -45,9 +45,13 @@
   1. Create a superuse account.
   1. Create a root article.
   1. Clone the database:
-     1. Login to database server using [psql](#conn_to_pgdb).
+     1. Login to database `pk_db_dev` using [psql](#conn_to_pgdb).
      1. List existing databases: `\l`
-     1. Run `create database go_api_tests with template pk_db_dev;`
+     1. Run:
+        - `create database go_api_tests with template pk_db_dev;`
+        - `\q`
+     1. Login to database `go_api_tests` using [psql](#conn_to_pgdb).
+     1. Run `truncate wiki_article cascade;`
   
 #### Create single articles
 
