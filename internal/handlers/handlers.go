@@ -10,6 +10,7 @@ import (
 	"coco-life.de/wapi/internal/models"
 	"coco-life.de/wapi/internal/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
@@ -49,15 +50,30 @@ func FetchArticleBySlug(c *gin.Context) {
 	c.JSON(http.StatusOK, article)
 }
 
-// AddRootArticle adds/sets the root article.
-func AddRootArticle(c *gin.Context) {
-	var articleInput models.RootArticle
-	if err := c.ShouldBindJSON(&articleInput); err != nil {
-		if notOK := utils.HandleErr(c, &err, "addArticle: Failed to bind 'Article': %v\n"); notOK {
+// InsertArticle creates/overwrites an article. All the article data needs to be passed 
+// as POST data.
+func InsertArticle(c *gin.Context) {
+	var artIn models.ArticleBase
+	if err := c.ShouldBindBodyWith(&artIn, binding.JSON); err != nil {
+		if notOK := utils.HandleErr(c, &err, "InsertArticle: Failed to bind 'Article': %v\n"); notOK {
 			return
 		}
 	}
+    // If the article has an initial ParentID, it is the root article.
+    if artIn.ParentID == 0 {
+        var root models.RootArticle
+        if err := c.ShouldBindBodyWith(&root, binding.JSON); err != nil {
+            if notOK := utils.HandleErr(c, &err, "addArticle: Failed to bind 'Article': %v\n"); notOK {
+                return
+            }
+        }
+        addRootArticle(c, &root)
+        return 
+    }
+}
 
+// addRootArticle adds/sets the root article.
+func addRootArticle(c *gin.Context, art *models.RootArticle) {
 	dbpool, err := pgxpool.Connect(context.Background(), "")
 	if notOK := utils.HandleErr(c, &err, "addArticle: Unable to connect to database: %v\n"); notOK {
 		return
@@ -74,7 +90,7 @@ func AddRootArticle(c *gin.Context) {
 		return
 	}
 
-	revID, err := db.InsertWikiArticleRevision(dbpool, hdrID, articleInput.Title, articleInput.Content)
+	revID, err := db.InsertWikiArticleRevision(dbpool, hdrID, art.Title, art.Content)
 	if notOK := utils.HandleErr(c, &err, "addArticle: Failed to INSERT into wiki_articlerevision: %v\n"); notOK {
 		return
 	}

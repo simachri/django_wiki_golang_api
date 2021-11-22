@@ -14,10 +14,13 @@ type Resource interface {
 
 // ArticleBase is the common base of every article.
 type ArticleBase struct {
-	ID         int    `json:"id"`
-	Title      string `json:"title" binding:"required"`
-	Content    string `json:"content"`
-	RevisionID int    `json:"revision_id" db:"rev_id"`
+    ID         int    `json:"id"`
+    Title      string `json:"title" binding:"required"`
+    Content    string `json:"content"`
+    RevisionID int    `json:"revision_id" db:"rev_id"`
+    // ParentID has no 'required' binding as the handler of POST /articles does not know 
+    // whether a root or a child article is to be created/updated.
+    ParentID   int    `json:"parent_id" db:"parent"`
 }
 
 // RootArticle is the root Wiki article.
@@ -29,7 +32,6 @@ type RootArticle struct {
 type Article struct {
     ArticleBase
 	Slug       string `json:"slug"`
-	ParentID   int    `json:"parent_id" binding:"required" db:"parent"`
 }
 
 

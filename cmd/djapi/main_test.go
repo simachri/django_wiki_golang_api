@@ -30,58 +30,58 @@ func clearDB() {
 	}
 }
 
-//// Create an article that is a child of the root article.
-//func TestAddChildToRoot(t *testing.T) {
-	//// Read the environment variables for the DB connection.
-	//godotenv.Load("../../.env")
-	//// Override the database name to use the testing database.
-	//os.Setenv("PGDATABASE", "go_api_tests")
+// Create an article that is a child of the root article.
+/*func TestAddChildToRoot(t *testing.T) {*/
+    /*// Read the environment variables for the DB connection.*/
+    /*godotenv.Load("../../.env")*/
+    /*// Override the database name to use the testing database.*/
+    /*os.Setenv("PGDATABASE", "go_api_tests")*/
 
-	//clearDB()
+    /*clearDB()*/
 
-	//// Create the following article hierarchy:
-	//// /  (root)
-	//// /unit1
-	//router := setupRouter()
-	//w := httptest.NewRecorder()
+    /*// Create the following article hierarchy:*/
+    /*// /  (root)*/
+    /*// /unit1*/
+    /*router := setupRouter()*/
+    /*w := httptest.NewRecorder()*/
 
-	//requestBody, err := json.Marshal(m.RootArticle{ArticleBase: m.ArticleBase{
-		//Title:   "Root article created from unit test",
-		//Content: "# First header"},
-	//})
-	//assert.Nil(t, err)
-	//req, _ := http.NewRequest(http.MethodPost, "/articles", bytes.NewBuffer(requestBody))
-	//req.Header.Set("Content-Type", "application/json; charset=UTF-8")
-	//router.ServeHTTP(w, req)
-	//// Get the root article ID.
-	//var root m.RootArticle
-	//err = json.Unmarshal([]byte(w.Body.String()), &root)
-	//assert.Nil(t, err)
+    /*requestBody, err := json.Marshal(m.RootArticle{ArticleBase: m.ArticleBase{*/
+        /*Title:   "Root article created from unit test",*/
+        /*Content: "# First header"},*/
+    /*})*/
+    /*assert.Nil(t, err)*/
+    /*req, _ := http.NewRequest(http.MethodPost, "/articles", bytes.NewBuffer(requestBody))*/
+    /*req.Header.Set("Content-Type", "application/json; charset=UTF-8")*/
+    /*router.ServeHTTP(w, req)*/
+    /*// Get the root article ID.*/
+    /*var root m.RootArticle*/
+    /*err = json.Unmarshal([]byte(w.Body.String()), &root)*/
+    /*assert.Nil(t, err)*/
 
-	//var art = m.Article{
-		//ArticleBase: m.ArticleBase{
-			//Title: "Child article below root",
-			//Content: "# Child article header",
-		//},
-		//ParentID: root.ID,
-		//Slug:     "unit1",
-	//}
-	//requestBody, err = json.Marshal(art)
-	//assert.Nil(t, err)
-	//req, _ = http.NewRequest(http.MethodPost, "/articles", bytes.NewBuffer(requestBody))
-	//req.Header.Set("Content-Type", "application/json; charset=UTF-8")
-	//router.ServeHTTP(w, req)
+    /*var art = m.Article{*/
+        /*ArticleBase: m.ArticleBase{*/
+            /*Title: "Child article below root",*/
+            /*Content: "# Child article header",*/
+            /*ParentID: root.ID,*/
+        /*},*/
+        /*Slug:     "unit1",*/
+    /*}*/
+    /*requestBody, err = json.Marshal(art)*/
+    /*assert.Nil(t, err)*/
+    /*req, _ = http.NewRequest(http.MethodPost, "/articles", bytes.NewBuffer(requestBody))*/
+    /*req.Header.Set("Content-Type", "application/json; charset=UTF-8")*/
+    /*router.ServeHTTP(w, req)*/
 
-	//assert.Equal(t, http.StatusOK, w.Code, "expected return code %v, but got %v", http.StatusOK, w.Code)
-	//var res m.Article
-	//err = json.Unmarshal([]byte(w.Body.String()), &res)
-	//assert.Nil(t, err)
-	//assert.True(t, art.Equals(res),
-		//fmt.Sprintf(
-			//"JSON response differs.\n"+
-				//"Exp: %v\n"+
-				//"Act: %v\n", art, res))
-//}
+    /*assert.Equal(t, http.StatusOK, w.Code, "expected return code %v, but got %v", http.StatusOK, w.Code)*/
+    /*var res m.Article*/
+    /*err = json.Unmarshal([]byte(w.Body.String()), &res)*/
+    /*assert.Nil(t, err)*/
+    /*assert.True(t, art.Equals(res),*/
+        /*fmt.Sprintf(*/
+            /*"JSON response differs.\n"+*/
+                /*"Exp: %v\n"+*/
+                /*"Act: %v\n", art, res))*/
+/*}*/
 
 func TestBasics(t *testing.T) {
 	// Read the environment variables for the DB connection.

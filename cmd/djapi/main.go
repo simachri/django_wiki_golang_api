@@ -17,9 +17,8 @@ func setupRouter() *gin.Engine {
 		c.String(http.StatusOK, "pong")
 	})
 	r.GET("/db/health", handlers.DbHealthCheck)
-	r.POST("/articles", handlers.AddRootArticle)
+	r.POST("/articles", handlers.InsertArticle)
 	r.GET("/articles", handlers.FetchRootArticle)
-    //r.POST("/articles/:slug", handlers.InsertAticle)
 	return r
 }
 
