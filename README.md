@@ -197,7 +197,7 @@
     <a id="db_wiki_fld_slug"></a>
     - URL part identifying the current hierarchy level in the wiki without leading and 
       trailing `/` 
-    - Is _empty_ for the __root node__.
+    - Is `null` for the __root node__.
     - The resulting URL is `https://<domain>/<parent>/../<parent>/<slug>`.
     - It __cannot__ contain a hierarchy, that is, a `/`.
 
@@ -216,11 +216,44 @@
         [here](https://www.ibase.ru/files/articles/programming/dbmstrees/sqltrees.html)
 
     - __Algorithms__:
-      - _Insert_ a new article `n` as _sibling_ next to node `l` (now on the left) as a 
-        _leaf_ node under _parent_ `p`:
+      - _Insert_ a new article `n` as _single child_ (new leaf) to _parent_ `p`:
+        <a id="mptt_algo_insert1"></a>
+
         1. Set `lft` and `rght` of `n` based on `l`:
            - `n.lft = l.rght + 1`
            - `n.rght = l.rght + 2`
+
+        1. Adjust `lft` and `rght` of all nodes `r` that are
+           - __either__ _right siblings_ to `n` (including their children)
+           - __or__ _direct children_ of `n`
+           - __or__ _direct parent_
+           - __or__ _ancestors_ (parent and grandparent of _parent_)
+           - __or__ _right_ to _direct parent_ or _ancestors_.
+
+           All their `lft` and `rght` values need to be incremented by `2`:
+           - `lft`: All nodes `r` with `r.lft >= n.lft`:
+             `r.lft = r.lft + 2`
+
+           - `rght`: All nodes `r` with `r.rght >= n.lft`:
+             `r.rght = r.rght + 2`
+
+              __Note__: The condition `r.rght >= r.rght` (mind the `rght` instead of the 
+              `lft`) does not cover for parent nodes as their `r.rght` is not matched by 
+              this condition. Example: Parent node has `r.lft = 1 and r.rght = 2`. New 
+              node is inserted with `n.lft = 2 and n.rght = 3`. `r.rght` has to be set to 
+              `4`.
+
+      - _Insert_ a new article `n` as _right sibling_ next to node `l` (now on the left) 
+        under _parent_ `p`.
+        - `l` and `n` are _leafs_.
+        - `l` (and `n`) have _additional right siblings_ `r`.
+
+        It is the __same algorithm__ as for inserting a node as a single child, see 
+        [here](#mptt_algo_insert1).
+
+        Backup:
+        - [ ] Am I mistaken something in the approach above? If no, __remove this__:
+        ```
         1. Adjust all nodes `r` right to `n` that are under _parent_ `p`, that is, all 
            nodes `r` with `n.rght >= r.lft AND r.rght < p.rght`:
            - Set `r.lft = r.lft + 2`
@@ -232,13 +265,8 @@
               ancestors): Set `r.rght = r.rght + 2`
             - `lft`: All nodes `r` with `n.rght <= r.lft` (nodes right to direct parent 
               or ancestors): Set `r.lft = r.lft + 2`
+        ```
 
-      - _Insert_ a new article `n` as _child_ to _parent_ `p`.
-        1. Set `lft` and `rght` of `n` based on `p`:
-           - `n.lft = p.lft + 1`
-           - `n.rght = p.lft + 2`
-         1. Adjust all nodes `r` above or right to _parent_ `p` including `p` istelf.
-            Same [algorithm](#adj_nodes_above_and_right).
 
       - _Delete_ an article `d`:
         - [ ] Review!
@@ -318,7 +346,18 @@
 
 ## API-Design
 
-### /articles
+### POST /articles - creating articles
+
+#### Root article
+
+  - [ ] Document API
+
+#### Child articles
+
+  In Django Wiki calling `GET <domain>/foo/bar` will redirect to the creation of a new 
+  article page with slug `bar` as child of `foo`. This only works if `foo` exists.
+
+  The API will _not support_ this behaviour.
 
 
 ## Installation guide
