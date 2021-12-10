@@ -19,13 +19,44 @@ func SelectRootArticle(dbpool *pgxpool.Pool) (*models.RootArticle, error) {
             hdr.id,
             rev.id as rev_id,
             rev.title,
-            rev.content
+            rev.content,
+            path.lft,
+            path.rght
         from wiki_article as hdr
             inner join wiki_articlerevision as rev
                 on hdr.id = rev.article_id
             inner join wiki_urlpath as path
                 on hdr.id = path.article_id  
         where path.level = 0;`)
+	return &article, err
+}
+
+// SelectArticleByID selects a specific article by wiki_article-id.
+func SelectArticleByID(dbpool *pgxpool.Pool, id int) (*models.Article, error) {
+	var article models.Article
+	err := pgxscan.Get(
+		context.Background(), dbpool, &article,
+		`select
+            hdr.id,
+            rev.id as rev_id,
+            rev.title,
+            rev.content,
+            COALESCE(path.slug, '') as slug,
+            path.id as path_id,
+            path.level,
+            path.lft,
+            path.rght,
+            COALESCE(parent_hdr.id, -1) as parent_art_id
+        from wiki_article as hdr
+            inner join wiki_articlerevision as rev
+                on hdr.id = rev.article_id
+            inner join wiki_urlpath as path
+                on hdr.id = path.article_id  
+            left join wiki_urlpath as parent_path
+                on path.parent_id = parent_path.id  
+            left join wiki_article as parent_hdr
+                on parent_path.article_id = parent_hdr.id
+        where hdr.id = $1;`, id)
 	return &article, err
 }
 
@@ -40,7 +71,7 @@ func SelectArticleBySlug(dbpool *pgxpool.Pool, slug string) (*models.Article, er
             rev.title,
             rev.content,
             path.slug,
-            COALESCE(path.parent_id, -1) as parent
+            COALESCE(path.parent_id, -1) as parent_path_id
         from wiki_article as hdr
             inner join wiki_articlerevision as rev
                 on hdr.id = rev.article_id
@@ -50,9 +81,119 @@ func SelectArticleBySlug(dbpool *pgxpool.Pool, slug string) (*models.Article, er
 	return &article, err
 }
 
+// MPTTCalcForIns calculates the 'level', 'left' and 'right' for a node under a parent.
+func MPTTCalcForIns(prtLvl int, prtLft int) (lvl int, left int, right int) {
+    // Insert a new article `n` as child to parent `p`:
+    // Set `lft` and `rght` of `n` based on `p`.
+    // - `n.lft = p.lft + 1`
+    // - `n.rght = p.lft + 2`
+    chLft := prtLft + 1
+    chRght := prtLft + 2
+    chLvl := prtLvl + 1
+    return chLvl, chLft, chRght
+}
+
+// MPTTUpdWikiURLPathForInsert updates all wiki_urlpath records after another node has been 
+// inserted.
+// Adjust `lft` and `rght` of all nodes `r` that are
+// - either right siblings to `n` (including their children)
+// - or direct children of `n`
+// - or direct parent
+// - or ancestors (parent and grandparent of parent)
+// - or right to direct parent or ancestors.
+//
+// All their `lft` and `rght` values need to be incremented by `2`:
+// - `lft`: All nodes `r` with `r.lft >= n.lft`:
+//   `r.lft = r.lft + 2`
+// - `rght`: All nodes `r` with `r.rght >= n.lft`:
+//   `r.rght = r.rght + 2`
+//
+// Note: The condition `r.rght >= r.rght` (mind the `rght` instead of the 
+// `lft`) does not cover for parent nodes as their `r.rght` is not matched by 
+// this condition. Example: Parent node has `r.lft = 1 and r.rght = 2`. New 
+// node is inserted with `n.lft = 2 and n.rght = 3`. `r.rght` has to be set to 
+// `4`.
+func MPTTUpdWikiURLPathForInsert(conn *pgxpool.Pool, newArtPathID, nLft int) error {
+	var err error
+	sqlUpdLft := `update wiki_urlpath
+        set lft = lft + 2
+        where lft >= $1
+              and not id = $2
+              `
+	_, err = conn.Exec(context.Background(), sqlUpdLft, nLft, newArtPathID)
+	if err != nil {
+		return fmt.Errorf("Failed to update record in wiki_urlpath: %v", err)
+	}
+
+    // These two SQL statements cannot be merged into one as for some nodes, e.g. 
+    // parents, only the field 'rght' needs to be updated.
+	sqlUpdRght := `update wiki_urlpath
+        set rght = rght + 2
+        where rght >= $1
+              and not id = $2
+               `
+	_, err = conn.Exec(context.Background(), sqlUpdRght, nLft, newArtPathID)
+	if err != nil {
+		return fmt.Errorf("Failed to update record in wiki_urlpath: %v", err)
+	}
+
+	return nil
+}
+
+// InsertWikiURLPathChild inserts the record into wiki_urlpath for any child article.
+// parentPathId is the value of wiki_urlpath-id of the parent's node.
+// It returns wiki_urlpath-id.
+func InsertWikiURLPathChild(conn *pgxpool.Pool,
+                            slug string,
+                            hdrID int,
+                            lvl int,
+                            left int,
+                            right int,
+                            parentPathID int,
+                            ) (int, error) {
+	sql := `insert into
+      wiki_urlpath
+      (
+        slug,
+        lft,
+        rght,
+        level,
+        tree_id,
+        article_id,
+        site_id,
+        parent_id
+      )
+      values
+      (
+        $1,
+        $2,
+        $3,
+        $4,
+        1,
+        $5,
+        1,
+        $6
+      )
+      returning id`
+      row := conn.QueryRow(context.Background(),
+                                sql,
+                                slug,
+                                left,
+                                right,
+                                lvl,
+                                hdrID,
+                                parentPathID)
+	var pathID int
+	err := row.Scan(&pathID)
+	if err != nil {
+		return -1, fmt.Errorf("Failed to insert record into wiki_urlpath: %v", err)
+	}
+	return pathID, nil
+}
+
 // InsertWikiURLPathRoot inserts the record into wiki_urlpath for the root article.
 func InsertWikiURLPathRoot(conn *pgxpool.Pool, hdrID int) error {
-    // TODO: Adjust lft and rght.
+	// TODO: Adjust lft and rght.
 	sql := `insert into
       wiki_urlpath
       (
@@ -74,7 +215,7 @@ func InsertWikiURLPathRoot(conn *pgxpool.Pool, hdrID int) error {
       )`
 	var commandTag pgconn.CommandTag
 	var err error
-    commandTag, err = conn.Exec(context.Background(), sql, hdrID)
+	commandTag, err = conn.Exec(context.Background(), sql, hdrID)
 	if err != nil {
 		return fmt.Errorf("Failed to insert record into wiki_urlpath: %v", err)
 	}
@@ -111,7 +252,7 @@ func InsertWikiURLPath(conn *pgxpool.Pool, hdrID int, slug string, parentID int)
       )`
 	var commandTag pgconn.CommandTag
 	var err error
-    commandTag, err = conn.Exec(context.Background(), sql, hdrID, slug, parentID)
+	commandTag, err = conn.Exec(context.Background(), sql, hdrID, slug, parentID)
 	if err != nil {
 		return fmt.Errorf("Failed to insert record into wiki_urlpath: %v", err)
 	}
@@ -122,6 +263,7 @@ func InsertWikiURLPath(conn *pgxpool.Pool, hdrID int, slug string, parentID int)
 }
 
 // InsertWikiArticleRevision creates the record in wiki_articlerevision.
+// It returns wiki_articlerevision-id.
 func InsertWikiArticleRevision(conn *pgxpool.Pool, hdrID int, title string, content string) (int, error) {
 	sql := `insert into
       wiki_articlerevision
@@ -209,5 +351,3 @@ func SetWikiArticleRevision(conn *pgxpool.Pool, hdrID int, revID int) error {
 	}
 	return nil
 }
-
-

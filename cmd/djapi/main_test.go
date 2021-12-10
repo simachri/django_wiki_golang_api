@@ -31,57 +31,102 @@ func clearDB() {
 }
 
 // Create an article that is a child of the root article.
-/*func TestAddChildToRoot(t *testing.T) {*/
-    /*// Read the environment variables for the DB connection.*/
-    /*godotenv.Load("../../.env")*/
-    /*// Override the database name to use the testing database.*/
-    /*os.Setenv("PGDATABASE", "go_api_tests")*/
+func TestAddChildToRoot(t *testing.T) {
+	// Read the environment variables for the DB connection.
+	godotenv.Load("../../.env")
+	// Override the database name to use the testing database.
+	os.Setenv("PGDATABASE", "go_api_tests")
 
-    /*clearDB()*/
+	clearDB()
 
-    /*// Create the following article hierarchy:*/
-    /*// /  (root)*/
-    /*// /unit1*/
-    /*router := setupRouter()*/
-    /*w := httptest.NewRecorder()*/
+	// Create the following article hierarchy:
+	// /  (root)
+	// /unit1
+	router := setupRouter()
 
-    /*requestBody, err := json.Marshal(m.RootArticle{ArticleBase: m.ArticleBase{*/
-        /*Title:   "Root article created from unit test",*/
-        /*Content: "# First header"},*/
-    /*})*/
-    /*assert.Nil(t, err)*/
-    /*req, _ := http.NewRequest(http.MethodPost, "/articles", bytes.NewBuffer(requestBody))*/
-    /*req.Header.Set("Content-Type", "application/json; charset=UTF-8")*/
-    /*router.ServeHTTP(w, req)*/
-    /*// Get the root article ID.*/
-    /*var root m.RootArticle*/
-    /*err = json.Unmarshal([]byte(w.Body.String()), &root)*/
-    /*assert.Nil(t, err)*/
+	// Create the root article.
+	body, err := json.Marshal(m.RootArticle{ArticleBase: m.ArticleBase{
+            Title:   "Root article created from unit test",
+            Content: "# First header",
+        },
+	})
+	assert.Nil(t, err)
+	req, err := http.NewRequest(http.MethodPost, "/articles", bytes.NewBuffer(body))
+	assert.Nil(t, err)
+	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	// Unmarshal the root article response to get its ID.
+	var root m.RootArticle
+	err = json.Unmarshal([]byte(w.Body.String()), &root)
+	assert.Nil(t, err)
 
-    /*var art = m.Article{*/
-        /*ArticleBase: m.ArticleBase{*/
-            /*Title: "Child article below root",*/
-            /*Content: "# Child article header",*/
-            /*ParentID: root.ID,*/
-        /*},*/
-        /*Slug:     "unit1",*/
-    /*}*/
-    /*requestBody, err = json.Marshal(art)*/
-    /*assert.Nil(t, err)*/
-    /*req, _ = http.NewRequest(http.MethodPost, "/articles", bytes.NewBuffer(requestBody))*/
-    /*req.Header.Set("Content-Type", "application/json; charset=UTF-8")*/
-    /*router.ServeHTTP(w, req)*/
+	// TEST
+	// Create the child article under root.
+	var art = m.Article{
+		ArticleBase: m.ArticleBase{
+			Title:       "Child article below root",
+			Content:     "# Child article header",
+			ParentArtID: root.ID,
+		},
+		Slug: "unit1",
+	}
+	body, err = json.Marshal(art)
+	assert.Nil(t, err)
+	req, err = http.NewRequest(http.MethodPost, "/articles", bytes.NewBuffer(body))
+	assert.Nil(t, err)
+	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
+    // Creating a new recorder is required to avoid side effects with previous HTTP 
+    // calls.
+   	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
 
-    /*assert.Equal(t, http.StatusOK, w.Code, "expected return code %v, but got %v", http.StatusOK, w.Code)*/
-    /*var res m.Article*/
-    /*err = json.Unmarshal([]byte(w.Body.String()), &res)*/
-    /*assert.Nil(t, err)*/
-    /*assert.True(t, art.Equals(res),*/
-        /*fmt.Sprintf(*/
-            /*"JSON response differs.\n"+*/
-                /*"Exp: %v\n"+*/
-                /*"Act: %v\n", art, res))*/
-/*}*/
+	// Child article validation.
+	assert.Equal(t, http.StatusCreated, w.Code, "expected return code %v, but got %v", http.StatusCreated, w.Code)
+    // fmt.Printf("Response body: %v\n", w.Body.String())
+	var res m.Article
+	err = json.Unmarshal([]byte(w.Body.String()), &res)
+	assert.Nil(t, err)
+	var artExp = m.Article{
+		ArticleBase: m.ArticleBase{
+			Title:       "Child article below root",
+			Content:     "# Child article header",
+			ParentArtID: root.ID,
+			Left:        2,
+			Right:       3,
+		},
+		Slug:  "unit1",
+		Level: 1,
+	}
+	assert.Equal(t, artExp.Title, res.Title, "Title differs")
+	assert.Equal(t, artExp.Content, res.Content, "Content differs")
+	assert.Equal(t, artExp.Slug, res.Slug, "Slug differs")
+	assert.Equal(t, artExp.Level, res.Level, "Level differs")
+	assert.Equal(t, artExp.ParentArtID, res.ParentArtID, "ParentArtID differs")
+	assert.Equal(t, artExp.Left, res.Left, "Left differs")
+	assert.Equal(t, artExp.Right, res.Right, "Right differs")
+
+	// Root article validation: Make sure that the 'Right' proprerty of the root article has been adjusted.
+	req, err = http.NewRequest("GET", "/articles", nil)
+	assert.Nil(t, err)
+   	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+	err = json.Unmarshal([]byte(w.Body.String()), &root)
+	assert.Nil(t, err)
+	rootExp := m.RootArticle{ArticleBase: m.ArticleBase{
+            Title:   "Root article created from unit test",
+            Content: "# First header",
+            Left:    1,
+            Right:   4,
+        },
+	}
+	assert.Equal(t, rootExp.Title, root.Title, "Title differs")
+	assert.Equal(t, rootExp.Content, root.Content, "Content differs")
+	assert.Equal(t, rootExp.ParentArtID, root.ParentArtID, "ParentArtID differs")
+	assert.Equal(t, rootExp.Left, root.Left, "Left differs")
+	assert.Equal(t, rootExp.Right, root.Right, "Right differs")
+}
 
 func TestBasics(t *testing.T) {
 	// Read the environment variables for the DB connection.
@@ -108,31 +153,11 @@ func TestBasics(t *testing.T) {
 					Title:   "Root article created from testing",
 					Content: "# Hello World"}},
 			http.StatusCreated, "", nil},
-		//{"Create root article", "POST", "/articles",
-		//&m.Article{
-		//Title:   "Article created from testing",
-		//Content: "# Hello World",
-		//Slug:    "root",
-		//ParentID: -1},
-		//http.StatusCreated, "", nil},
-		// The following test requires the POST /articles test to be run first.
-		// FIXME: Make this test independent of POST /articles.
 		{"GET root article", "GET", "/articles", nil, http.StatusOK, "",
 			&m.RootArticle{
 				ArticleBase: m.ArticleBase{
 					Title:   "Root article created from testing",
 					Content: "# Hello World"}}},
-		//{"GET root article", "GET", "/articles/root", nil, http.StatusOK, "",
-		//&m.Article{
-		//Title:   "Article created from testing",
-		//Content: "# Hello World",
-		//Slug:    "root",
-		//ParentID: -1}},
-		//{"GET endpoint /articles/1", "GET", "/articles/1", nil, http.StatusOK, "",
-		//&m.Article{
-		//ID:      1,
-		//Title:   "Article created from testing",
-		//Content: "# Hello World"}},
 	}
 
 	router := setupRouter()
@@ -151,7 +176,7 @@ func TestBasics(t *testing.T) {
 				assert.Equal(t, tc.expString, w.Body.String(), "expected return string %v, but got %v", tc.expString, w.Body.String())
 			}
 			if tc.expResponse != nil {
-				fmt.Printf("Response body: %v\n", w.Body.String())
+				// fmt.Printf("Response body: %v\n", w.Body.String())
 				respType := reflect.TypeOf(tc.expResponse).Elem()
 				data := reflect.New(respType).Interface()
 				err := json.Unmarshal([]byte(w.Body.String()), &data)
