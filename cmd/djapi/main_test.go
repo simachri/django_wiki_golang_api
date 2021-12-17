@@ -30,6 +30,150 @@ func clearDB() {
 	}
 }
 
+// Create a second article that is a child of the root article and a sibling to an
+// existing child article.
+func TestAddSecondChildToRoot(t *testing.T) {
+	// Read the environment variables for the DB connection.
+	godotenv.Load("../../.env")
+	// Override the database name to use the testing database.
+	os.Setenv("PGDATABASE", "go_api_tests")
+
+	clearDB()
+
+	// Create the following article hierarchy:
+	// /  (root)
+	// /unit1
+	// /unit2
+	router := setupRouter()
+
+	// Create the root article.
+	body, err := json.Marshal(m.RootArticle{ArticleBase: m.ArticleBase{
+		Title:   "Root article created from unit test",
+		Content: "# First header",
+	},
+	})
+	assert.Nil(t, err)
+	req, err := http.NewRequest(http.MethodPost, "/articles", bytes.NewBuffer(body))
+	assert.Nil(t, err)
+	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	// Unmarshal the root article response to get its ID.
+	var root m.RootArticle
+	err = json.Unmarshal([]byte(w.Body.String()), &root)
+	assert.Nil(t, err)
+
+	// Create the first child artile /unit1 under root /.
+	var art1 = m.Article{
+		ArticleBase: m.ArticleBase{
+			Title:       "Child article below root",
+			Content:     "# Child article header",
+			ParentArtID: root.ID,
+		},
+		Slug: "unit1",
+	}
+	body, err = json.Marshal(art1)
+	assert.Nil(t, err)
+	req, err = http.NewRequest(http.MethodPost, "/articles", bytes.NewBuffer(body))
+	assert.Nil(t, err)
+	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
+	// Creating a new recorder is required to avoid side effects with previous HTTP
+	// calls.
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusCreated, w.Code, "expected return code %v, but got %v", http.StatusCreated, w.Code)
+	// fmt.Printf("Response body: %v\n", w.Body.String())
+	var resArt1 m.Article
+	err = json.Unmarshal([]byte(w.Body.String()), &resArt1)
+	assert.Nil(t, err)
+
+	// TEST
+	// Create the second child article /unit2 under root /..
+	var art = m.Article{
+		ArticleBase: m.ArticleBase{
+			Title:       "Second child article under root",
+			Content:     "# Foo Bar Baz",
+			ParentArtID: root.ID,
+		},
+		Slug: "unit2",
+	}
+	body, err = json.Marshal(art)
+	assert.Nil(t, err)
+	req, err = http.NewRequest(http.MethodPost, "/articles", bytes.NewBuffer(body))
+	assert.Nil(t, err)
+	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
+	// Creating a new recorder is required to avoid side effects with previous HTTP
+	// calls.
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+    // Child article validation: /unit2
+	assert.Equal(t, http.StatusCreated, w.Code, "expected return code %v, but got %v", http.StatusCreated, w.Code)
+	// fmt.Printf("Response body: %v\n", w.Body.String())
+	var resArt2 m.Article
+	err = json.Unmarshal([]byte(w.Body.String()), &resArt2)
+	assert.Nil(t, err)
+	var artExp = m.Article{
+		ArticleBase: m.ArticleBase{
+			Title:       "Second child article under root",
+			Content:     "# Foo Bar Baz",
+			ParentArtID: root.ID,
+			Left:        4,
+			Right:       5,
+		},
+		Slug:  "unit2",
+		Level: 1,
+	}
+	assert.Equal(t, artExp.Title, resArt2.Title, "Article unit2: Title differs")
+	assert.Equal(t, artExp.Content, resArt2.Content, "Article unit2: Content differs")
+	assert.Equal(t, artExp.Slug, resArt2.Slug, "Article unit2: Slug differs")
+	assert.Equal(t, artExp.Level, resArt2.Level, "Article unit2: Level differs")
+	assert.Equal(t, artExp.ParentArtID, resArt2.ParentArtID, "Article unit2: ParentArtID differs")
+	assert.Equal(t, artExp.Left, resArt2.Left, "Article unit2: Left differs")
+	assert.Equal(t, artExp.Right, resArt2.Right, "Article unit2: Right differs")
+
+    // Child article validation: /unit1 must not have been changed.
+	artExp = m.Article{
+		ArticleBase: m.ArticleBase{
+			Title:       "Child article below root",
+			Content:     "# Child article header",
+			ParentArtID: root.ID,
+			Left:        2,
+			Right:       3,
+		},
+		Slug:  "unit1",
+		Level: 1,
+	}
+	assert.Equal(t, artExp.Title, resArt1.Title, "Article unit1: Title differs")
+	assert.Equal(t, artExp.Content, resArt1.Content, "Article unit1: Content differs")
+	assert.Equal(t, artExp.Slug, resArt1.Slug, "Article unit1: Slug differs")
+	assert.Equal(t, artExp.Level, resArt1.Level, "Article unit1: Level differs")
+	assert.Equal(t, artExp.ParentArtID, resArt1.ParentArtID, "Article unit1: ParentArtID differs")
+	assert.Equal(t, artExp.Left, resArt1.Left, "Article unit1: Left differs")
+	assert.Equal(t, artExp.Right, resArt1.Right, "Article unit1: Right differs")
+
+	// Root article validation: Make sure that the 'Right' proprerty of the root article has been adjusted.
+	req, err = http.NewRequest("GET", "/articles", nil)
+	assert.Nil(t, err)
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+	err = json.Unmarshal([]byte(w.Body.String()), &root)
+	assert.Nil(t, err)
+	rootExp := m.RootArticle{ArticleBase: m.ArticleBase{
+		Title:   "Root article created from unit test",
+		Content: "# First header",
+		Left:    1,
+		Right:   6,
+	},
+	}
+	assert.Equal(t, rootExp.Title, root.Title, "Root: Title differs")
+	assert.Equal(t, rootExp.Content, root.Content, "Root: Content differs")
+	assert.Equal(t, rootExp.ParentArtID, root.ParentArtID, "Root: ParentArtID differs")
+	assert.Equal(t, rootExp.Left, root.Left, "Root: Left differs")
+	assert.Equal(t, rootExp.Right, root.Right, "Root: Right differs")
+}
+
 // Create an article that is a child of the root article.
 func TestAddChildToRoot(t *testing.T) {
 	// Read the environment variables for the DB connection.
@@ -46,9 +190,9 @@ func TestAddChildToRoot(t *testing.T) {
 
 	// Create the root article.
 	body, err := json.Marshal(m.RootArticle{ArticleBase: m.ArticleBase{
-            Title:   "Root article created from unit test",
-            Content: "# First header",
-        },
+		Title:   "Root article created from unit test",
+		Content: "# First header",
+	},
 	})
 	assert.Nil(t, err)
 	req, err := http.NewRequest(http.MethodPost, "/articles", bytes.NewBuffer(body))
@@ -76,14 +220,14 @@ func TestAddChildToRoot(t *testing.T) {
 	req, err = http.NewRequest(http.MethodPost, "/articles", bytes.NewBuffer(body))
 	assert.Nil(t, err)
 	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
-    // Creating a new recorder is required to avoid side effects with previous HTTP 
-    // calls.
-   	w = httptest.NewRecorder()
+	// Creating a new recorder is required to avoid side effects with previous HTTP
+	// calls.
+	w = httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
 	// Child article validation.
 	assert.Equal(t, http.StatusCreated, w.Code, "expected return code %v, but got %v", http.StatusCreated, w.Code)
-    // fmt.Printf("Response body: %v\n", w.Body.String())
+	// fmt.Printf("Response body: %v\n", w.Body.String())
 	var res m.Article
 	err = json.Unmarshal([]byte(w.Body.String()), &res)
 	assert.Nil(t, err)
@@ -109,17 +253,17 @@ func TestAddChildToRoot(t *testing.T) {
 	// Root article validation: Make sure that the 'Right' proprerty of the root article has been adjusted.
 	req, err = http.NewRequest("GET", "/articles", nil)
 	assert.Nil(t, err)
-   	w = httptest.NewRecorder()
+	w = httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)
 	err = json.Unmarshal([]byte(w.Body.String()), &root)
 	assert.Nil(t, err)
 	rootExp := m.RootArticle{ArticleBase: m.ArticleBase{
-            Title:   "Root article created from unit test",
-            Content: "# First header",
-            Left:    1,
-            Right:   4,
-        },
+		Title:   "Root article created from unit test",
+		Content: "# First header",
+		Left:    1,
+		Right:   4,
+	},
 	}
 	assert.Equal(t, rootExp.Title, root.Title, "Title differs")
 	assert.Equal(t, rootExp.Content, root.Content, "Content differs")

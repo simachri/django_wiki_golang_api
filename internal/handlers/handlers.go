@@ -124,7 +124,7 @@ func addChildArticle(c *gin.Context, child *models.Article) {
 
 	// Calculate 'left', 'right' and 'level' for the child article using the MPTT
 	// algorithm.
-	lvl, left, right := db.MPTTCalcForIns(parent.Level, parent.Left)
+	lvl, left, right := db.MPTTCalcForIns(parent.Level, parent.Right)
     pathID, err := db.InsertWikiURLPathChild(dbpool, child.Slug, newArtID, lvl, left, right, parent.PathID)
 	if notOK := utils.HandleErr(c, &err, "addChildArticle: Failed to INSERT into wiki_urlpath: %v\n"); notOK {
 		tx.Rollback(context.Background())

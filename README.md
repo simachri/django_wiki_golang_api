@@ -216,12 +216,12 @@
         [here](https://www.ibase.ru/files/articles/programming/dbmstrees/sqltrees.html)
 
     - __Algorithms__:
-      - _Insert_ a new article `n` as _single child_ (new leaf) to _parent_ `p`:
-        <a id="mptt_algo_insert1"></a>
+      - _Insert_ a new article `n` as _single child_ (new leaf) or _right sibling_ to the 
+        rightmose direct child of _parent_ `p`:
 
         1. Set `lft` and `rght` of `n` based on `l`:
-           - `n.lft = l.rght + 1`
-           - `n.rght = l.rght + 2`
+           - `n.lft = l.rght`
+           - `n.rght = l.rght + 1`
 
         1. Adjust `lft` and `rght` of all nodes `r` that are
            - __either__ _right siblings_ to `n` (including their children)
@@ -242,31 +242,6 @@
               this condition. Example: Parent node has `r.lft = 1 and r.rght = 2`. New 
               node is inserted with `n.lft = 2 and n.rght = 3`. `r.rght` has to be set to 
               `4`.
-
-      - _Insert_ a new article `n` as _right sibling_ next to node `l` (now on the left) 
-        under _parent_ `p`.
-        - `l` and `n` are _leafs_.
-        - `l` (and `n`) have _additional right siblings_ `r`.
-
-        It is the __same algorithm__ as for inserting a node as a single child, see 
-        [here](#mptt_algo_insert1).
-
-        Backup:
-        - [ ] Am I mistaken something in the approach above? If no, __remove this__:
-        ```
-        1. Adjust all nodes `r` right to `n` that are under _parent_ `p`, that is, all 
-           nodes `r` with `n.rght >= r.lft AND r.rght < p.rght`:
-           - Set `r.lft = r.lft + 2`
-           - Set `r.rght = r.rght + 2`
-         1. Adjust all nodes `r` above or right to _parent_ `p` including `p` istelf:
-            <a id="adj_nodes_above_and_right"></a>
-
-            - `rght`: All nodes `r` with `n.rght <= r.rght` (direct parent and 
-              ancestors): Set `r.rght = r.rght + 2`
-            - `lft`: All nodes `r` with `n.rght <= r.lft` (nodes right to direct parent 
-              or ancestors): Set `r.lft = r.lft + 2`
-        ```
-
 
       - _Delete_ an article `d`:
         - [ ] Review!
@@ -358,6 +333,13 @@
   article page with slug `bar` as child of `foo`. This only works if `foo` exists.
 
   The API will _not support_ this behaviour.
+
+  Instead, the API uses the `parent_art_id` provided in the JSON POST 
+  payload to identify the parent node. 
+
+  If a second child article is added under the same root node, it becomes the _right 
+  sibling ("append")_ to the other existing child article. Curtently, there is no 
+  specific reason why using an "append" over an "insert at the beginning".
 
 
 ## Installation guide

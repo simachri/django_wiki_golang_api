@@ -82,13 +82,15 @@ func SelectArticleBySlug(dbpool *pgxpool.Pool, slug string) (*models.Article, er
 }
 
 // MPTTCalcForIns calculates the 'level', 'left' and 'right' for a node under a parent.
-func MPTTCalcForIns(prtLvl int, prtLft int) (lvl int, left int, right int) {
+// prtRgh is the 'right' value of the parent. The 'right' value is the anchor for being 
+// able to add new child nodes as right siblings to other already existing children.
+func MPTTCalcForIns(prtLvl int, prtRght int) (lvl int, left int, right int) {
     // Insert a new article `n` as child to parent `p`:
     // Set `lft` and `rght` of `n` based on `p`.
-    // - `n.lft = p.lft + 1`
-    // - `n.rght = p.lft + 2`
-    chLft := prtLft + 1
-    chRght := prtLft + 2
+    // - `n.lft = p.rght`
+    // - `n.rght = p.rght + 1`
+    chLft := prtRght
+    chRght := prtRght + 1
     chLvl := prtLvl + 1
     return chLvl, chLft, chRght
 }
