@@ -18,7 +18,7 @@ func setupRouter() *gin.Engine {
 	})
 	r.GET("/db/health", handlers.DbHealthCheck)
 	r.POST("/articles", handlers.InsertArticle)
-	r.GET("/articles", handlers.FetchRootArticle)
+	r.GET("/articles/root", handlers.RetrieveRootArticle)
     r.GET("/articles/:id", handlers.RetrieveArticleByID)
 	return r
 }

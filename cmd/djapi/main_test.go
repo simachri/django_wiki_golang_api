@@ -241,7 +241,7 @@ func TestAddSecondChildToRoot(t *testing.T) {
 	assert.Equal(t, artExp.Right, resArt1.Right, "Article unit1: Right differs")
 
 	// Root article validation: Make sure that the 'Right' proprerty of the root article has been adjusted.
-	req, err = http.NewRequest("GET", "/articles", nil)
+	req, err = http.NewRequest("GET", "/articles/root", nil)
 	assert.Nil(t, err)
 	w = httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -339,7 +339,7 @@ func TestAddChildToRoot(t *testing.T) {
 	assert.Equal(t, artExp.Right, res.Right, "Right differs")
 
 	// Root article validation: Make sure that the 'Right' proprerty of the root article has been adjusted.
-	req, err = http.NewRequest("GET", "/articles", nil)
+	req, err = http.NewRequest("GET", "/articles/root", nil)
 	assert.Nil(t, err)
 	w = httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -385,7 +385,7 @@ func TestBasics(t *testing.T) {
 					Title:   "Root article created from testing",
 					Content: "# Hello World"}},
 			http.StatusCreated, "", nil},
-		{"GET root article", "GET", "/articles", nil, http.StatusOK, "",
+		{"GET root article", "GET", "/articles/root", nil, http.StatusOK, "",
 			&m.RootArticle{
 				ArticleBase: m.ArticleBase{
 					Title:   "Root article created from testing",

@@ -17,8 +17,8 @@ import (
 
 var baseURL string
 
-// FetchRootArticle selects the root article from the database.
-func FetchRootArticle(c *gin.Context) {
+// RetrieveRootArticle selects the root article from the database.
+func RetrieveRootArticle(c *gin.Context) {
 	dbpool, err := pgxpool.Connect(context.Background(), "")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
@@ -34,7 +34,7 @@ func FetchRootArticle(c *gin.Context) {
 	c.JSON(http.StatusOK, article)
 }
 
-// RetrieveArticleByID returns an article given by its slug.
+// RetrieveArticleByID returns an article given by its ID.
 func RetrieveArticleByID(c *gin.Context) {
 	dbpool, err := pgxpool.Connect(context.Background(), "")
 	if err != nil {
@@ -56,8 +56,8 @@ func RetrieveArticleByID(c *gin.Context) {
 	c.JSON(http.StatusOK, article)
 }
 
-// FetchArticleBySlug returns an article given by its slug.
-func FetchArticleBySlug(c *gin.Context) {
+// RetrieveArticleBySlug returns an article given by its slug.
+func RetrieveArticleBySlug(c *gin.Context) {
 	dbpool, err := pgxpool.Connect(context.Background(), "")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
