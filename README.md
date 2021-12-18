@@ -321,7 +321,11 @@
 
 ## API-Design
 
-### POST /articles - creating articles
+### GET /articles/{id} - retrieve article
+
+  - [ ] Document API
+
+### POST /articles - create article
 
 #### Root article
 

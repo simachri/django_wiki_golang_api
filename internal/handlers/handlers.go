@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 
 	"coco-life.de/wapi/internal/db"
 	"coco-life.de/wapi/internal/models"
@@ -26,6 +27,28 @@ func FetchRootArticle(c *gin.Context) {
 	defer dbpool.Close()
 
 	article, err := db.SelectRootArticle(dbpool)
+	if notOK := utils.HandleErr(c, &err, "Failed to query database table wiki_article: %v\n"); notOK {
+		return
+	}
+
+	c.JSON(http.StatusOK, article)
+}
+
+// RetrieveArticleByID returns an article given by its slug.
+func RetrieveArticleByID(c *gin.Context) {
+	dbpool, err := pgxpool.Connect(context.Background(), "")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+		os.Exit(1)
+	}
+	defer dbpool.Close()
+
+    articleID, err := strconv.Atoi(c.Param("id"))
+	if notOK := utils.HandleErr(c, &err, "Article ID needs to be an integer: %v\n"); notOK {
+		return
+	}
+
+	article, err := db.SelectArticleByID(dbpool, articleID)
 	if notOK := utils.HandleErr(c, &err, "Failed to query database table wiki_article: %v\n"); notOK {
 		return
 	}
